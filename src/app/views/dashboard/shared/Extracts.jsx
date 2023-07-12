@@ -1,7 +1,5 @@
 import {
 	Box,
-	Icon,
-	IconButton,
 	styled,
 	Table,
 	TableBody,
@@ -38,80 +36,67 @@ const StyledTable = styled(Table)(({ theme }) => ({
 	},
 }));
 
-const extractsList = [
-	{
-		name: 'All Patients',
-		date: '18 january, 2019',
-		received: 673,
-		expected: 1283,
-		progress: <LinearProgressWithLabel color="error" value={44} />,
-	},
-	{
-		name: 'ART Patients',
-		date: '10 january, 2019',
-		received: 243,
-		expected: 512,
-		progress: <LinearProgressWithLabel value={66} />,
-	},
-	{
-		name: 'Patient Baselines',
-		date: '8 january, 2019',
-		received: 1900,
-		expected: 1800,
-		progress: <LinearProgressWithLabel value={90} />,
-	},
-	{
-		name: 'Patient Status',
-		date: '1 january, 2019',
-		received: 401,
-		expected: 401,
-		progress: <LinearProgressWithLabel color="success" value={100} />,
-	},
-	{
-		name: 'Patient Labs',
-		date: '1 january, 2019',
-		received: 90,
-		expected: 1500,
-		progress: (
-			<Tooltip disableTouchListener title="Received: 0/ Expected: 1200">
-				<LinearProgressWithLabel value={3} />
-			</Tooltip>
-		),
-	},
-	{
-		name: 'Patient Pharmacy',
-		date: '1 january, 2019',
-		received: 0,
-		expected: 1200,
-		progress: <LinearProgressWithLabel value={0} color="primary" />,
-	},
-];
+const getProgressPerc = (ex, re) => {
+	return parseInt((re / ex) * 100);
+};
 
-const Extracts = () => {
+const Extracts = ({ list = {} }) => {
+	list = list?.documents
+		?.filter((doc) => doc.expected !== null)
+		?.map((ex) => {
+			let progress = <LinearProgressWithLabel color="error" value={44} />;
+			let tooltip = '';
+			if (ex.queued === ex.expected) {
+				progress = (
+					<LinearProgressWithLabel
+						value={getProgressPerc(ex.received, ex.queued)}
+						color={'success'}
+					/>
+				);
+				tooltip = `Queued: ${ex.queued}/ Expected: ${ex.expected}`;
+			} else if (ex.expected > ex.received && ex.queued === 0) {
+				progress = (
+					<LinearProgressWithLabel value={getProgressPerc(ex.expected, ex.received)} />
+				);
+				tooltip = `Received: ${ex.received}/ Expected: ${ex.expected}`;
+			} else if (ex.queued < ex.received) {
+				progress = (
+					<LinearProgressWithLabel
+						value={getProgressPerc(ex.received, ex.queued)}
+						color={'secondary'}
+					/>
+				);
+				tooltip = `Queued: ${ex.queued}/ Expected: ${ex.expected}`;
+			}
+			return { ...ex, progress, tooltip };
+		})
+		.sort((a, b) => a.rank - b.rank);
 	return (
 		<Box width="100%" overflow="auto">
 			<StyledTable>
 				<TableHead>
 					<TableRow>
-						<TableCell align="left">Metric</TableCell>
+						<TableCell align="left">Extract</TableCell>
 						<TableCell align="center">Progress</TableCell>
 						<TableCell align="center">Status Date</TableCell>
 					</TableRow>
 				</TableHead>
 
 				<TableBody>
-					{extractsList.map((extract, index) => (
+					{list?.map((extract, index) => (
 						<TableRow key={index}>
-							<TableCell align="left">{extract.name}</TableCell>
+							<TableCell align="left">{extract.extract_display_name}</TableCell>
 							<Tooltip
 								disableTouchListener
 								placement="bottom"
-								title={`Received: ${extract.received}/ Expected: ${extract.expected}`}
+								title={`${extract.tooltip}`}
 								followCursor
 							>
 								<TableCell align="center">{extract.progress}</TableCell>
 							</Tooltip>
-							<TableCell align="center">{extract.date}</TableCell>
+							<TableCell align="center">
+								{new Date(extract.updated_at).toLocaleString()}
+							</TableCell>
 						</TableRow>
 					))}
 				</TableBody>
